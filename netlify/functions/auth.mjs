@@ -17,8 +17,6 @@ export const handler = async (event) => {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Método no permitido' }) };
   }
 
-  let browser;
-
   try {
     const { username, password } = JSON.parse(event.body);
 
@@ -30,17 +28,13 @@ export const handler = async (event) => {
       };
     }
 
-    const result = await login(username, password);
-    browser = result.browser;
-
-    const $ = cheerio.load(result.html);
+    const { html } = await login(username, password);
+    const $ = cheerio.load(html);
 
     const userName =
       $('.navbar-nav .nav-link, .user-name, .dropdown-toggle').first().text().trim() ||
       $('body').text().match(/Bienvenid[oa]\s*[,:]?\s*(.+?)[\n\r]/)?.[1]?.trim() ||
       username;
-
-    await browser.close();
 
     return {
       statusCode: 200,
@@ -52,7 +46,6 @@ export const handler = async (event) => {
       }),
     };
   } catch (error) {
-    if (browser) await browser.close().catch(() => {});
     const status = error.message.includes('Credenciales') ? 401 : 500;
     return {
       statusCode: status,

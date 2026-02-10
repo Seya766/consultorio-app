@@ -17,8 +17,6 @@ export const handler = async (event) => {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Método no permitido' }) };
   }
 
-  let browser;
-
   try {
     const { username, password } = JSON.parse(event.body);
 
@@ -30,12 +28,9 @@ export const handler = async (event) => {
       };
     }
 
-    const result = await login(username, password);
-    browser = result.browser;
-    const page = result.page;
+    const { instance, followRedirects, html } = await login(username, password);
 
-    // Collect nav links from landing page
-    const $ = cheerio.load(result.html);
+    const $ = cheerio.load(html);
     const navLinks = [];
     $('a[href]').each((_, el) => {
       const href = $(el).attr('href');
@@ -45,29 +40,26 @@ export const handler = async (event) => {
       }
     });
 
-    // Extract cases from the current page (/au/Users)
     let cases = extractFromTables($);
 
-    // Try other routes if no cases found
     if (cases.length === 0) {
       const routes = ['/au/procesos', '/au/casos', '/au/asignaciones', '/au/expedientes'];
       for (const route of routes) {
         try {
-          await page.goto(`https://unimagdalena.gestionjuridica.com${route}`, {
-            waitUntil: 'networkidle2',
-            timeout: 8000,
+          const res = await instance.get(route, {
+            headers: { 'Sec-Fetch-Site': 'same-origin', 'Sec-Fetch-Dest': 'document', 'Sec-Fetch-Mode': 'navigate' },
           });
-          const routeHtml = await page.content();
-          const $page = cheerio.load(routeHtml);
-          cases = extractFromTables($page);
-          if (cases.length > 0) break;
+          const followed = await followRedirects(res);
+          if (followed.status === 200) {
+            const $page = cheerio.load(followed.data);
+            cases = extractFromTables($page);
+            if (cases.length > 0) break;
+          }
         } catch {
           continue;
         }
       }
     }
-
-    await browser.close();
 
     return {
       statusCode: 200,
@@ -81,7 +73,6 @@ export const handler = async (event) => {
       }),
     };
   } catch (error) {
-    if (browser) await browser.close().catch(() => {});
     return {
       statusCode: error.message.includes('Credenciales') ? 401 : 500,
       headers: CORS,
@@ -100,7 +91,6 @@ function extractFromTables($) {
       cells.each((__, cell) => {
         rowData.push($(cell).text().trim());
       });
-
       cases.push({
         id: `case-${cases.length}`,
         radicado: rowData[0] || '',
