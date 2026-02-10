@@ -11,11 +11,23 @@ function createSession() {
     baseURL: BASE_URL,
     maxRedirects: 0,
     headers: {
-      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36',
-      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-      'Accept-Language': 'es-419,es;q=0.9',
+      'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/139.0.0.0 Safari/537.36 Edg/139.0.0.0',
+      'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+      'Accept-Language': 'es-419,es;q=0.9,es-ES;q=0.8,en;q=0.7',
+      'Accept-Encoding': 'gzip, deflate, br',
+      'Cache-Control': 'no-cache',
+      'DNT': '1',
+      'Upgrade-Insecure-Requests': '1',
+      'Sec-CH-UA': '"Not;A=Brand";v="99", "Microsoft Edge";v="139", "Chromium";v="139"',
+      'Sec-CH-UA-Mobile': '?0',
+      'Sec-CH-UA-Platform': '"Windows"',
+      'Sec-Fetch-Dest': 'document',
+      'Sec-Fetch-Mode': 'navigate',
+      'Sec-Fetch-Site': 'none',
+      'Sec-Fetch-User': '?1',
     },
     validateStatus: () => true,
+    decompress: true,
   });
 
   session.interceptors.response.use((response) => {
@@ -85,7 +97,8 @@ export async function login(username, password) {
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
       'Origin': BASE_URL,
-      'Referer': `${BASE_URL}/au/login`,
+      'Referer': `${BASE_URL}/au/`,
+      'Sec-Fetch-Site': 'same-origin',
     },
   });
 
