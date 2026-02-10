@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { THEME } from './theme/constants';
 import useCases from './hooks/useCases';
+import { fetchCases } from './services/api';
 
 import AuthScreen from './components/auth/AuthScreen';
 import Sidebar from './components/layout/Sidebar';
@@ -13,7 +14,25 @@ export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
   const [isModalOpen, setIsModalOpen] = useState(false);
-  const { cases, addCase, clearCases } = useCases();
+  const [loadingCases, setLoadingCases] = useState(false);
+  const { cases, addCase, setCases, clearCases } = useCases();
+
+  // Load cases from platform after login
+  useEffect(() => {
+    if (!user?.username || !user?.password) return;
+
+    setLoadingCases(true);
+    fetchCases(user.username, user.password)
+      .then((data) => {
+        if (data.cases?.length > 0) {
+          setCases(data.cases);
+        }
+      })
+      .catch(() => {
+        // Platform cases couldn't be loaded, user can still add manually
+      })
+      .finally(() => setLoadingCases(false));
+  }, [user]);
 
   if (!user) {
     return <AuthScreen onLogin={setUser} />;
@@ -46,11 +65,11 @@ export default function App() {
         <MobileHeader onLogout={handleLogout} />
 
         {activeTab === 'dashboard' && (
-          <DashboardView user={user} cases={cases} onOpenModal={openModal} />
+          <DashboardView user={user} cases={cases} onOpenModal={openModal} loading={loadingCases} />
         )}
 
         {activeTab === 'cases' && (
-          <CasesView cases={cases} onOpenModal={openModal} />
+          <CasesView cases={cases} onOpenModal={openModal} loading={loadingCases} />
         )}
       </main>
 

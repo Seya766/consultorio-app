@@ -17,5 +17,5 @@ export default function useCases() {
 
   const clearCases = () => setCases([]);
 
-  return { cases, addCase, clearCases };
+  return { cases, setCases, addCase, clearCases };
 }
