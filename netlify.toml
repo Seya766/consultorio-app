@@ -5,6 +5,13 @@
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"
+  external_node_modules = ["@sparticuz/chromium"]
+
+[functions."auth"]
+  timeout = 26
+
+[functions."cases"]
+  timeout = 26
 
 [[redirects]]
   from = "/api/*"

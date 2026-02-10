@@ -8,14 +8,6 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
-const BROWSER_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-  'Sec-Fetch-Dest': 'document',
-  'Sec-Fetch-Mode': 'navigate',
-  'Sec-Fetch-Site': 'same-origin',
-};
-
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS };
@@ -24,6 +16,8 @@ export const handler = async (event) => {
   if (event.httpMethod !== 'POST') {
     return { statusCode: 405, headers: CORS, body: JSON.stringify({ error: 'Método no permitido' }) };
   }
+
+  let browser;
 
   try {
     const { username, password } = JSON.parse(event.body);
@@ -36,10 +30,12 @@ export const handler = async (event) => {
       };
     }
 
-    const { instance, followRedirects, html } = await login(username, password);
+    const result = await login(username, password);
+    browser = result.browser;
+    const page = result.page;
 
-    // Collect nav links from the landing page for discovery
-    const $ = cheerio.load(html);
+    // Collect nav links from landing page
+    const $ = cheerio.load(result.html);
     const navLinks = [];
     $('a[href]').each((_, el) => {
       const href = $(el).attr('href');
@@ -49,26 +45,29 @@ export const handler = async (event) => {
       }
     });
 
-    // Extract cases from the landing page first (/au/Users)
+    // Extract cases from the current page (/au/Users)
     let cases = extractFromTables($);
 
-    // If none, try other routes
+    // Try other routes if no cases found
     if (cases.length === 0) {
       const routes = ['/au/procesos', '/au/casos', '/au/asignaciones', '/au/expedientes'];
       for (const route of routes) {
         try {
-          const res = await instance.get(route, { headers: BROWSER_HEADERS });
-          const followed = await followRedirects(res);
-          if (followed.status === 200) {
-            const $page = cheerio.load(followed.data);
-            cases = extractFromTables($page);
-            if (cases.length > 0) break;
-          }
+          await page.goto(`https://unimagdalena.gestionjuridica.com${route}`, {
+            waitUntil: 'networkidle2',
+            timeout: 8000,
+          });
+          const routeHtml = await page.content();
+          const $page = cheerio.load(routeHtml);
+          cases = extractFromTables($page);
+          if (cases.length > 0) break;
         } catch {
           continue;
         }
       }
     }
+
+    await browser.close();
 
     return {
       statusCode: 200,
@@ -82,6 +81,7 @@ export const handler = async (event) => {
       }),
     };
   } catch (error) {
+    if (browser) await browser.close().catch(() => {});
     return {
       statusCode: error.message.includes('Credenciales') ? 401 : 500,
       headers: CORS,
