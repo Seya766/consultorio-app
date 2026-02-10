@@ -8,6 +8,14 @@ const CORS = {
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
 };
 
+const BROWSER_HEADERS = {
+  'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+  'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'same-origin',
+};
+
 export const handler = async (event) => {
   if (event.httpMethod === 'OPTIONS') {
     return { statusCode: 204, headers: CORS };
@@ -28,10 +36,10 @@ export const handler = async (event) => {
       };
     }
 
-    const { session, html } = await login(username, password);
-    const $ = cheerio.load(html);
+    const { instance, followRedirects, html } = await login(username, password);
 
-    // Collect all internal nav links for debugging
+    // Collect nav links from the landing page for discovery
+    const $ = cheerio.load(html);
     const navLinks = [];
     $('a[href]').each((_, el) => {
       const href = $(el).attr('href');
@@ -41,17 +49,18 @@ export const handler = async (event) => {
       }
     });
 
-    // Try to extract cases from /au/Users page (the main student page)
+    // Extract cases from the landing page first (/au/Users)
     let cases = extractFromTables($);
 
-    // If no cases found on the Users page, try other common routes
+    // If none, try other routes
     if (cases.length === 0) {
       const routes = ['/au/procesos', '/au/casos', '/au/asignaciones', '/au/expedientes'];
       for (const route of routes) {
         try {
-          const res = await session.get(route);
-          if (res.status === 200) {
-            const $page = cheerio.load(res.data);
+          const res = await instance.get(route, { headers: BROWSER_HEADERS });
+          const followed = await followRedirects(res);
+          if (followed.status === 200) {
+            const $page = cheerio.load(followed.data);
             cases = extractFromTables($page);
             if (cases.length > 0) break;
           }
@@ -104,7 +113,6 @@ function extractFromTables($) {
     }
   });
 
-  // Also try card/panel layouts
   if (cases.length === 0) {
     $('.card-body, .panel-body, .list-group-item').each((_, el) => {
       const text = $(el).text().trim();
