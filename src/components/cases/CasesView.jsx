@@ -20,14 +20,14 @@ export default function CasesView({ data, loading }) {
       {/* Consultas */}
       <Section title="Consultas jurídicas" icon={FolderOpen} count={consultas.length}>
         {consultas.map((c) => (
-          <ItemCard key={c.id} code={c.code} href={c.href} type="Consulta" status={c.status} client={c.client} description={c.description} raw={c.raw} />
+          <ItemCard key={c.id} code={c.code} type="Consulta" status={c.status} statusDetail={c.statusDetail} client={c.client} area={c.area} asesor={c.asesor} createdAt={c.createdAt} updatedAt={c.updatedAt} />
         ))}
       </Section>
 
       {/* Procesos */}
       <Section title="Procesos jurídicos" icon={Scale} count={procesos.length}>
         {procesos.map((p) => (
-          <ItemCard key={p.id} code={p.code} href={p.href} type="Proceso" status={p.status} client={p.client} description={p.description} raw={p.raw} />
+          <ItemCard key={p.id} code={p.code} type="Proceso" status={p.status} statusDetail={p.statusDetail} client={p.client} area={p.area} asesor={p.asesor} createdAt={p.createdAt} updatedAt={p.updatedAt} contraparte={p.contraparte} />
         ))}
       </Section>
 
@@ -95,7 +95,8 @@ function Section({ title, icon: Icon, count, children }) {
   );
 }
 
-function ItemCard({ code, href, type, status, client, description, raw }) {
+function ItemCard({ code, type, status, statusDetail, client, area, asesor, createdAt, updatedAt, contraparte }) {
+  const isActive = status?.toLowerCase() === 'activo';
   return (
     <div className="bg-white border border-border-soft rounded-lg p-5 hover:border-uni-blue transition-colors">
       <div className="flex justify-between items-start mb-2 flex-wrap gap-2">
@@ -103,13 +104,23 @@ function ItemCard({ code, href, type, status, client, description, raw }) {
           <span className="font-mono text-xs bg-cream-dark px-2 py-1 rounded text-muted">{code}</span>
           <span className="text-[10px] font-bold uppercase text-[#4A3C88] bg-[#4A3C88]/10 px-2 py-0.5 rounded">{type}</span>
         </div>
-        {status && <span className="text-xs text-muted">{status}</span>}
+        {status && (
+          <span className={`text-[11px] font-bold uppercase px-2 py-0.5 rounded border ${
+            isActive
+              ? 'bg-[#E8F5E9] text-[#1B5E20] border-[#C8E6C9]'
+              : 'bg-gray-100 text-gray-600 border-gray-200'
+          }`}>
+            {statusDetail || status}
+          </span>
+        )}
       </div>
       {client && <p className="text-sm font-medium text-dark">{client}</p>}
-      {description && <p className="text-xs text-muted mt-1">{description}</p>}
-      {raw && !client && !description && (
-        <p className="text-xs text-muted mt-1">{raw.join(' | ')}</p>
-      )}
+      {contraparte && <p className="text-xs text-muted">vs. {contraparte}</p>}
+      {area && <p className="text-xs text-uni-blue mt-1">{area}</p>}
+      <div className="flex justify-between text-xs text-muted mt-2 flex-wrap gap-1">
+        {asesor && <span>Asesor: {asesor}</span>}
+        {createdAt && <span>{createdAt}</span>}
+      </div>
     </div>
   );
 }

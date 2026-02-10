@@ -7,6 +7,7 @@ import Sidebar from './components/layout/Sidebar';
 import MobileHeader from './components/layout/MobileHeader';
 import DashboardView from './components/dashboard/DashboardView';
 import CasesView from './components/cases/CasesView';
+import CalendarView from './components/calendar/CalendarView';
 
 export default function App() {
   const [user, setUser] = useState(null);
@@ -53,6 +54,10 @@ export default function App() {
 
         {activeTab === 'cases' && (
           <CasesView data={platformData} loading={loading} />
+        )}
+
+        {activeTab === 'calendar' && (
+          <CalendarView data={platformData} loading={loading} />
         )}
       </main>
     </div>
