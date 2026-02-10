@@ -1,0 +1,10 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer components {
+  .form-input {
+    @apply w-full px-4 py-3 bg-cream border border-border-soft rounded
+           focus:outline-none focus:border-uni-blue transition-all;
+  }
+}
