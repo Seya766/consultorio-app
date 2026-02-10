@@ -2,6 +2,7 @@ import axios from 'axios';
 import * as cheerio from 'cheerio';
 
 const BASE_URL = 'https://unimagdalena.gestionjuridica.com';
+const MAX_REDIRECTS = 10;
 
 function createSession() {
   let cookies = {};
@@ -14,7 +15,7 @@ function createSession() {
       'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
       'Accept-Language': 'es-419,es;q=0.9',
     },
-    validateStatus: (status) => status < 500,
+    validateStatus: () => true,
   });
 
   session.interceptors.response.use((response) => {
@@ -22,8 +23,12 @@ function createSession() {
     if (setCookies) {
       for (const raw of setCookies) {
         const [pair] = raw.split(';');
-        const [name, ...rest] = pair.split('=');
-        cookies[name.trim()] = rest.join('=');
+        const eqIndex = pair.indexOf('=');
+        if (eqIndex > 0) {
+          const name = pair.substring(0, eqIndex).trim();
+          const value = pair.substring(eqIndex + 1);
+          cookies[name] = value;
+        }
       }
     }
     return response;
@@ -39,19 +44,35 @@ function createSession() {
     return config;
   });
 
+  // Helper: follow redirects manually to capture all cookies
+  session.getFollowRedirects = async (url) => {
+    let response = await session.get(url);
+    let hops = 0;
+    while ((response.status === 301 || response.status === 302) && hops < MAX_REDIRECTS) {
+      const location = response.headers['location'] || '';
+      const nextUrl = location.startsWith('http') ? location : location;
+      response = await session.get(nextUrl);
+      hops++;
+    }
+    return response;
+  };
+
   return session;
 }
 
 export async function login(username, password) {
   const session = createSession();
 
-  // 1. GET login page to get CSRF token + session cookies
-  const loginPage = await session.get('/au/login');
-  const $ = cheerio.load(loginPage.data);
+  // 1. GET login page following all redirects to collect cookies
+  const loginPage = await session.getFollowRedirects('/au/login');
+
+  const $ = cheerio.load(loginPage.data || '');
   const token = $('input[name="_token"]').val();
 
   if (!token) {
-    throw new Error('No se pudo obtener el token CSRF de la plataforma');
+    throw new Error(
+      `No se pudo obtener el token CSRF (status: ${loginPage.status}, url: /au/login, bodyLength: ${(loginPage.data || '').length})`
+    );
   }
 
   // 2. POST login
@@ -68,24 +89,23 @@ export async function login(username, password) {
     },
   });
 
-  // Laravel returns 302 to /au/Users on success, 302 to /au/login on failure
+  // Laravel returns 302 on login
   const location = loginResponse.headers['location'] || '';
-
-  if (loginResponse.status === 302 && location.includes('/au/Users')) {
-    // Follow redirect to get the user page
-    const usersPage = await session.get('/au/Users');
-    return { session, html: usersPage.data };
-  }
 
   if (loginResponse.status === 302 && location.includes('/au/login')) {
     throw new Error('Credenciales incorrectas');
   }
 
-  // If we got a 200 back, check if it's the login form again
+  // Follow redirect (to /au/Users or wherever it goes)
+  if (loginResponse.status === 302) {
+    const page = await session.getFollowRedirects(location);
+    return { session, html: page.data, redirectedTo: location };
+  }
+
+  // Check if response is the login form again
   if (loginResponse.data && loginResponse.data.includes('name="password"')) {
     throw new Error('Credenciales incorrectas');
   }
 
-  // Might have landed on the page directly
-  return { session, html: loginResponse.data };
+  return { session, html: loginResponse.data, redirectedTo: '' };
 }
