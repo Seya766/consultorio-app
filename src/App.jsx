@@ -1,37 +1,27 @@
 import { useState, useEffect } from 'react';
 import { THEME } from './theme/constants';
-import useCases from './hooks/useCases';
-import { fetchCases } from './services/api';
+import { fetchPlatformData } from './services/api';
 
 import AuthScreen from './components/auth/AuthScreen';
 import Sidebar from './components/layout/Sidebar';
 import MobileHeader from './components/layout/MobileHeader';
 import DashboardView from './components/dashboard/DashboardView';
 import CasesView from './components/cases/CasesView';
-import CaseForm from './components/cases/CaseForm';
 
 export default function App() {
   const [user, setUser] = useState(null);
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [loadingCases, setLoadingCases] = useState(false);
-  const { cases, addCase, setCases, clearCases } = useCases();
+  const [loading, setLoading] = useState(false);
+  const [platformData, setPlatformData] = useState({ tasks: [], consultas: [], procesos: [] });
 
-  // Load cases from platform after login
   useEffect(() => {
     if (!user?.username || !user?.password) return;
 
-    setLoadingCases(true);
-    fetchCases(user.username, user.password)
-      .then((data) => {
-        if (data.cases?.length > 0) {
-          setCases(data.cases);
-        }
-      })
-      .catch(() => {
-        // Platform cases couldn't be loaded, user can still add manually
-      })
-      .finally(() => setLoadingCases(false));
+    setLoading(true);
+    fetchPlatformData(user.username, user.password)
+      .then((data) => setPlatformData(data))
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, [user]);
 
   if (!user) {
@@ -41,16 +31,9 @@ export default function App() {
   const handleLogout = () => {
     if (confirm('¿Cerrar sesión?')) {
       setUser(null);
-      clearCases();
+      setPlatformData({ tasks: [], consultas: [], procesos: [] });
     }
   };
-
-  const handleAddCase = (caseData) => {
-    addCase(caseData);
-    setIsModalOpen(false);
-  };
-
-  const openModal = () => setIsModalOpen(true);
 
   return (
     <div className={`flex min-h-screen ${THEME.bg} font-sans text-dark`}>
@@ -65,19 +48,13 @@ export default function App() {
         <MobileHeader onLogout={handleLogout} />
 
         {activeTab === 'dashboard' && (
-          <DashboardView user={user} cases={cases} onOpenModal={openModal} loading={loadingCases} />
+          <DashboardView user={user} data={platformData} loading={loading} />
         )}
 
         {activeTab === 'cases' && (
-          <CasesView cases={cases} onOpenModal={openModal} loading={loadingCases} />
+          <CasesView data={platformData} loading={loading} />
         )}
       </main>
-
-      <CaseForm
-        open={isModalOpen}
-        onClose={() => setIsModalOpen(false)}
-        onSubmit={handleAddCase}
-      />
     </div>
   );
 }

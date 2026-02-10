@@ -12,7 +12,7 @@ export async function loginToplatform(username, password) {
   return data;
 }
 
-export async function fetchCases(username, password) {
+export async function fetchPlatformData(username, password) {
   const res = await fetch(`${API_BASE}/cases`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
@@ -20,6 +20,6 @@ export async function fetchCases(username, password) {
   });
 
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Error al obtener casos');
+  if (!res.ok) throw new Error(data.error || 'Error al obtener datos');
   return data;
 }

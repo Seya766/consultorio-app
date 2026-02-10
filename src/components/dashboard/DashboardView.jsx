@@ -1,89 +1,90 @@
-import { FolderOpen, Clock, Bell, BookOpen } from 'lucide-react';
+import { FolderOpen, Clock, Bell, AlertTriangle, CheckCircle, Loader2 } from 'lucide-react';
 import Card from '../ui/Card';
-import Button from '../ui/Button';
-import CasesTable from '../cases/CasesTable';
 
-export default function DashboardView({ user, cases, onOpenModal }) {
+export default function DashboardView({ user, data, loading }) {
+  const { tasks = [], consultas = [], procesos = [] } = data;
+  const pendingTasks = tasks.filter((t) => !t.resolved);
+  const resolvedTasks = tasks.filter((t) => t.resolved);
+
   return (
     <div className="space-y-8">
-      {/* Encabezado */}
-      <div className="border-b border-border-soft pb-6 flex flex-col md:flex-row justify-between items-start md:items-end gap-4">
-        <div>
-          <span className="text-uni-blue text-xs font-bold uppercase tracking-widest mb-1 block">
-            Panel de Control
-          </span>
-          <h2 className="text-3xl font-bold text-dark">Hola, {user.name.split(' ')[0]}</h2>
-          <p className="text-muted mt-1">Aquí tienes el resumen de tu práctica jurídica.</p>
-        </div>
-        <div className="flex gap-3 text-sm font-medium text-dark">
-          <div className="bg-[#EAEAE5] px-4 py-2 rounded flex flex-col items-center">
-            <span className="text-[10px] text-muted uppercase tracking-wide">Nivel</span>
-            <span className="font-bold text-lg leading-none">{user.semester}º</span>
-          </div>
-          <div className="bg-[#EAEAE5] px-4 py-2 rounded flex flex-col items-center min-w-[100px]">
-            <span className="text-[10px] text-muted uppercase tracking-wide">Área</span>
-            <span className="font-bold text-lg leading-none">{user.clinic}</span>
-          </div>
-        </div>
+      <div className="border-b border-border-soft pb-6">
+        <span className="text-uni-blue text-xs font-bold uppercase tracking-widest mb-1 block">
+          Panel de Control
+        </span>
+        <h2 className="text-3xl font-bold text-dark">Hola, {user.name.split(' ')[0]}</h2>
+        <p className="text-muted mt-1">Resumen de tu práctica jurídica.</p>
       </div>
 
-      {/* Indicadores */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      {loading && (
+        <div className="flex items-center gap-3 px-4 py-3 bg-uni-blue/5 border border-uni-blue/20 rounded-lg">
+          <Loader2 className="w-4 h-4 animate-spin text-uni-blue" />
+          <span className="text-sm text-uni-blue font-medium">Cargando datos de Gestión Jurídica...</span>
+        </div>
+      )}
+
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <Card className="border-l-4 border-l-dark">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-muted text-xs font-bold uppercase tracking-wide">Casos Asignados</h3>
-            <FolderOpen className="w-5 h-5 text-dark" />
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-muted text-xs font-bold uppercase tracking-wide">Tareas</h3>
+            <Bell className="w-4 h-4 text-dark" />
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-dark">{cases.length}</span>
-            <span className="text-sm text-muted">Activos</span>
-          </div>
+          <span className="text-3xl font-bold text-dark">{tasks.length}</span>
+          <span className="text-xs text-muted ml-2">{pendingTasks.length} pendientes</span>
         </Card>
 
         <Card className="border-l-4 border-l-uni-blue">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-uni-blue text-xs font-bold uppercase tracking-wide">Próximos Vencimientos</h3>
-            <Clock className="w-5 h-5 text-uni-blue" />
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-uni-blue text-xs font-bold uppercase tracking-wide">Consultas</h3>
+            <FolderOpen className="w-4 h-4 text-uni-blue" />
           </div>
-          <div className="flex items-baseline gap-2">
-            <span className="text-4xl font-bold text-uni-blue">0</span>
-            <span className="text-sm text-uni-blue font-medium">Esta semana</span>
-          </div>
+          <span className="text-3xl font-bold text-uni-blue">{consultas.length}</span>
         </Card>
 
-        <Card className="bg-dark border-none text-white">
-          <div className="flex justify-between items-start mb-4">
-            <h3 className="text-muted-light text-xs font-bold uppercase tracking-wide">Mensajes del Docente</h3>
-            <Bell className="w-5 h-5 text-white" />
+        <Card className="border-l-4 border-l-[#4A3C88]">
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-[#4A3C88] text-xs font-bold uppercase tracking-wide">Procesos</h3>
+            <Clock className="w-4 h-4 text-[#4A3C88]" />
           </div>
-          <p className="text-sm italic leading-relaxed text-muted-light">
-            No tienes mensajes nuevos de tus tutores.
-          </p>
+          <span className="text-3xl font-bold text-[#4A3C88]">{procesos.length}</span>
+        </Card>
+
+        <Card className="border-l-4 border-l-green-600">
+          <div className="flex justify-between items-start mb-3">
+            <h3 className="text-green-700 text-xs font-bold uppercase tracking-wide">Resueltas</h3>
+            <CheckCircle className="w-4 h-4 text-green-600" />
+          </div>
+          <span className="text-3xl font-bold text-green-700">{resolvedTasks.length}</span>
         </Card>
       </div>
 
-      {/* Tabla de casos */}
+      {/* Pending tasks */}
       <div>
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-xl font-bold text-dark">Mis Asignaciones</h3>
-        </div>
+        <h3 className="text-xl font-bold text-dark mb-4 flex items-center gap-2">
+          <AlertTriangle className="w-5 h-5 text-amber-500" />
+          Tareas pendientes
+        </h3>
 
-        <div className="bg-white border border-border-soft rounded-lg overflow-hidden">
-          {cases.length === 0 ? (
-            <div className="p-16 text-center flex flex-col items-center justify-center">
-              <div className="w-16 h-16 bg-cream-dark rounded-full flex items-center justify-center mb-4">
-                <BookOpen className="w-8 h-8 text-muted-light" />
+        {pendingTasks.length === 0 && !loading ? (
+          <div className="text-center py-12 border border-dashed border-border-soft rounded-lg">
+            <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-3" />
+            <p className="text-muted font-medium">No tienes tareas pendientes</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {pendingTasks.map((task, i) => (
+              <div key={task.code + '-' + i} className="bg-white border border-border-soft rounded-lg p-4 hover:border-uni-blue transition-colors">
+                <div className="flex justify-between items-start mb-2">
+                  <span className="font-mono text-xs bg-cream-dark px-2 py-1 rounded text-muted">{task.code}</span>
+                  <span className="text-xs text-red-600 font-semibold">{task.dueDate}</span>
+                </div>
+                <p className="text-sm text-dark font-medium mb-2">{task.description}</p>
+                <p className="text-xs text-muted">Creado por: {task.createdBy} &middot; {task.creationDate}</p>
               </div>
-              <h3 className="text-lg font-bold text-dark">Sin casos asignados</h3>
-              <p className="text-muted max-w-sm mx-auto mb-6">
-                Aún no has registrado ningún caso para este consultorio.
-              </p>
-              <Button onClick={onOpenModal}>Registrar Caso</Button>
-            </div>
-          ) : (
-            <CasesTable cases={cases} />
-          )}
-        </div>
+            ))}
+          </div>
+        )}
       </div>
     </div>
   );
