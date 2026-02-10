@@ -7,25 +7,42 @@ const MONTHS = [
   'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre',
 ];
 
+const MONTH_MAP = {
+  // Full Spanish: "11 de Diciembre de 2025"
+  'enero': 0, 'febrero': 1, 'marzo': 2, 'abril': 3, 'mayo': 4, 'junio': 5,
+  'julio': 6, 'agosto': 7, 'septiembre': 8, 'octubre': 9, 'noviembre': 10, 'diciembre': 11,
+  // Abbreviated: "24 Feb, 2025" or "06 Novi, 2025"
+  'ene': 0, 'feb': 1, 'mar': 2, 'abr': 3, 'may': 4, 'jun': 5,
+  'jul': 6, 'ago': 7, 'sep': 8, 'oct': 9, 'novi': 10, 'nov': 10, 'dic': 11,
+};
+
 function parseDate(str) {
   if (!str) return null;
-  // "24 Feb, 2025. 10:34 AM" or "Fecha de vencimiento: ..."
   const cleaned = str.replace('Fecha de vencimiento: ', '').replace('Fecha de creacion: ', '').trim();
+  if (!cleaned) return null;
+
+  // Full Spanish: "11 de Diciembre de 2025"
+  const fullMatch = cleaned.match(/(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})/i);
+  if (fullMatch) {
+    const day = parseInt(fullMatch[1]);
+    const month = MONTH_MAP[fullMatch[2].toLowerCase()];
+    const year = parseInt(fullMatch[3]);
+    if (month !== undefined) return new Date(year, month, day);
+  }
+
+  // Abbreviated: "24 Feb, 2025. 10:34 AM" or "06 Novi, 2025. 04:43 PM"
+  const abbrMatch = cleaned.match(/(\d{1,2})\s+(\w+),?\s*(\d{4})/);
+  if (abbrMatch) {
+    const day = parseInt(abbrMatch[1]);
+    const month = MONTH_MAP[abbrMatch[2].toLowerCase()];
+    const year = parseInt(abbrMatch[3]);
+    if (month !== undefined) return new Date(year, month, day);
+  }
+
+  // Fallback: try native Date parser
   const d = new Date(cleaned);
   if (!isNaN(d.getTime())) return d;
 
-  // Try Spanish months: "24 Feb, 2025" or "06 Novi, 2025"
-  const monthMap = {
-    'Ene': 0, 'Feb': 1, 'Mar': 2, 'Abr': 3, 'May': 4, 'Jun': 5,
-    'Jul': 6, 'Ago': 7, 'Sep': 8, 'Oct': 9, 'Novi': 10, 'Nov': 10, 'Dic': 11,
-  };
-  const match = cleaned.match(/(\d{1,2})\s+(\w+),?\s*(\d{4})/);
-  if (match) {
-    const day = parseInt(match[1]);
-    const month = monthMap[match[2]];
-    const year = parseInt(match[3]);
-    if (month !== undefined) return new Date(year, month, day);
-  }
   return null;
 }
 
